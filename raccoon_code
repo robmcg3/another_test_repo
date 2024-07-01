@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+########################################################################
+# Filename    : Relay.py
+# Description : Control Relay and Motor via Button 
+# Author      : www.freenove.com
+# modification: 2019/12/27
+########################################################################
+
+# error
+#  /home/mrrob/GitRepos/Raccoon_Sprinkler/pir_relay.py:34: RuntimeWarning: This channel is already in use, continuing anyway.  Use GPIO.setwarnings(False) to disable warnings.
+# GPIO.setup(relayPin, GPIO.OUT)   # set relayPin to OUTPUT mode
+# 
+# $ ls -l /dev/gpiomem
+# crw-rw---- 1 root gpio 244, 0 Dec 28 22:51 /dev/gpiomem
+# If it doesn't then set the correct permissions as follows
+
+#  sudo chown root.gpio /dev/gpiomem
+#  sudo chmod g+rw /dev/gpiomem
+
+import RPi.GPIO as GPIO
+import time
+
+
+sensorPin = 12   
+relayPin = 11            
+debounceTime = 9
+firstLoop = True
+
+# PIR setup
+def setup():
+    GPIO.setmode(GPIO.BOARD)        # use PHYSICAL GPIO Numbering
+    GPIO.setup(sensorPin, GPIO.IN)  # set sensorPin to INPUT mode
+    GPIO.setup(relayPin, GPIO.OUT)   # set relayPin to OUTPUT mode
+    
+    print("about to sleep")
+    
+    for x in range(5):
+        print(x)
+        time.sleep(12) # P.I.R. Sensor needs one minute to initialize.
+    print("sleep over")
+
+    
+
+# PSEUDO CODE for MAIN LOOP
+#
+# WHILE TRUE - infinite loop
+#.  STEP 1 - record time of change
+#.  STEP 2 - check if long enough and actual change. if so, update flags
+#.  STEP 3 - if change flag, make change put in wait time
+#.  STEP 4 - update operating state variable  
+
+
+
+def loop():
+
+    relayState = False # setting relay to match low sensor state
+    GPIO.output(relayPin,relayState)
+    
+    operatingState = GPIO.LOW
+    proposedSensorState = GPIO.LOW 
+    stateChanged = False
+
+    lastChangeTime = round(time.time()*1000) # initialize last change
+    
+    print("starting main loop")
+    
+    #x = 0
+    
+
+    while True: #  infinite loop
+        newReading = GPIO.input(sensorPin)
+        #x = x+1
+        #if x % 100000 == 0:
+            #print(x)        
+          
+        if newReading != proposedSensorState:
+            lastChangeTime = round(time.time()*1000)
+            proposedSensorState = newReading
+            
+        if ((round(time.time()*1000) - lastChangeTime) > debounceTime) 
+            and proposedSensorState != operatingState:
+                #print(" ")
+                #print(x)
+
+            stateChanged = True
+            operatingState = proposedSensorState 
+                
+            if operatingState == GPIO.HIGH: # 
+                relayState =  True # 
+                print("Turn on relay ..." )
+                print("Motion is Detected")
+            else: #  either high or low, No other options
+                relayState = False
+                print("Turn off relay ... ")
+                print("Motion is no longer detected!")
+        #else:
+          #  stateChanged = False # redundant?
+
+            
+        if stateChanged:
+            GPIO.output(relayPin,relayState) # does this need to persist?
+            stateChanged = False
+            
+            if relayState:
+                time.sleep(15) # possible persistence? 
+            else:
+                time.sleep(5) # allow settling time after shut off
+            
+
+    
+def destroy():
+    GPIO.cleanup()                      
+
+if __name__ == '__main__':     # Program entrance
+    print ("Program is starting..." )
+    setup()
+    try:
+        loop()
+    except KeyboardInterrupt:   # Press ctrl-c to end the program.
+        destroy()
